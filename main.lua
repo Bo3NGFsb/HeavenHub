@@ -1,89 +1,83 @@
--- [[ HEAVENHUB V3 - FIX TOÀN BỘ LỖI ]] --
+-- [[ HEAVENHUB BOOTLOADER ]] --
+repeat task.wait(0) until game:IsLoaded()
+
+-- Thông báo khi chạy script (Giống Beecon)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "HeavenHub | Sol's RNG",
-   LoadingTitle = "Đang kiểm tra dữ liệu...",
+   Name = "HeavenHub | Multi-Game",
+   LoadingTitle = "Đang kiểm tra dữ liệu game...",
    LoadingSubtitle = "by ChosenBossScript",
    ConfigurationSaving = { Enabled = false }
 })
 
--- Biến điều khiển
-_G.AutoRoll = false
-_G.AutoPick = false
+local i_am_skidder = game.PlaceId
 
--- Tab chính
-local MainTab = Window:CreateTab("Tính Năng", 4483362458)
+-- [[ HỆ THỐNG NHẬN DIỆN GAME ]] --
+if i_am_skidder == 15579077077 then 
+    -- ĐÂY LÀ ID CỦA SOL'S RNG (Hoặc thay bằng ID chính xác của game bạn muốn)
+    Rayfield:Notify({Title = "HeavenHub", Content = "Đã nhận diện: Sol's RNG!"})
+    
+    -- TẠO TAB TÍNH NĂNG CHO SOL'S RNG
+    local MainTab = Window:CreateTab("Main Features", 4483362458)
+    
+    _G.AutoPick = false
+    MainTab:CreateToggle({
+       Name = "Auto Collect Potions (Beecon Method)",
+       CurrentValue = false,
+       Callback = function(Value)
+          _G.AutoPick = Value
+          if Value then
+              task.spawn(function()
+                  while _G.AutoPick do
+                      -- Cách nhặt đồ tối ưu nhất cho Sol's RNG
+                      for _, v in pairs(workspace:GetChildren()) do
+                          if v:IsA("Model") or (v:IsA("BasePart") and v:FindFirstChild("TouchInterest")) then
+                              if v.Name:lower():find("potion") or v.Name:lower():find("lucky") then
+                                  local root = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                                  local target = v:IsA("Model") and (v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")) or v
+                                  if root and target then
+                                      root.CFrame = target.CFrame
+                                      firetouchinterest(root, target, 0)
+                                      task.wait(0.1)
+                                      firetouchinterest(root, target, 1)
+                                  end
+                              end
+                          end
+                      end
+                      task.wait(0.5)
+                  end
+              end)
+          end
+       end,
+    })
+    
+    MainTab:CreateToggle({
+       Name = "Auto Roll",
+       CurrentValue = false,
+       Callback = function(Value)
+          _G.AutoRoll = Value
+          task.spawn(function()
+             while _G.AutoRoll do
+                game:GetService("ReplicatedStorage"):FindFirstChild("Roll", true):FireServer()
+                task.wait(0.1)
+             end
+          end)
+       end,
+    })
 
--- AUTO ROLL (Đã thêm kiểm tra Remote)
-MainTab:CreateToggle({
-   Name = "Auto Roll",
-   CurrentValue = false,
-   Callback = function(Value)
-      _G.AutoRoll = Value
-      task.spawn(function()
-         while _G.AutoRoll do
-            local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Roll", true) or 
-                           game:GetService("ReplicatedStorage"):FindFirstChild("RemoteEvents") and 
-                           game:GetService("ReplicatedStorage").RemoteEvents:FindFirstChild("Roll")
-            
-            if remote then
-                if remote:IsA("RemoteEvent") then remote:FireServer() end
-            end
-            task.wait(0.1)
-         end
-      end)
-   end,
-})
+else
+    -- NẾU VÀO GAME KHÁC, SẼ HIỆN KEY SYSTEM HOẶC THÔNG BÁO
+    Rayfield:Notify({
+        Title = "Cảnh báo",
+        Content = "Game này chưa được HeavenHub hỗ trợ!",
+        Duration = 10
+    })
+    
+    -- Bạn có thể thêm các game khác ở đây dùng elseif giống như Beecon Hub
+end
 
--- AUTO PICK (Cơ chế nhặt đồ chính xác hơn)
-MainTab:CreateToggle({
-   Name = "Auto Pick Potions",
-   CurrentValue = false,
-   Callback = function(Value)
-      _G.AutoPick = Value
-      task.spawn(function()
-         while _G.AutoPick do
-            -- Sol's RNG thường để đồ rơi trong Workspace
-            for _, v in pairs(workspace:GetChildren()) do
-               if not _G.AutoPick then break end
-               
-               -- Kiểm tra xem có phải là vật phẩm không (Thường là Model hoặc Part có tên Potion)
-               if v:IsA("Model") or (v:IsA("BasePart") and v:FindFirstChild("TouchInterest")) then
-                   if v.Name:find("Potion") or v.Name:find("Lucky") or v.Name:find("Coin") then
-                       local target = v:IsA("Model") and (v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")) or v
-                       local char = game.Players.LocalPlayer.Character
-                       
-                       if target and char and char:FindFirstChild("HumanoidRootPart") then
-                           -- Teleport đến và nhặt
-                           char.HumanoidRootPart.CFrame = target.CFrame
-                           task.wait(0.1)
-                           firetouchinterest(char.HumanoidRootPart, target, 0)
-                           task.wait()
-                           firetouchinterest(char.HumanoidRootPart, target, 1)
-                       end
-                   end
-               end
-            end
-            task.wait(0.5)
-         end
-      end)
-   end,
-})
-
--- Nút tăng tốc (Fix lỗi lag)
-MainTab:CreateButton({
-   Name = "Tăng Tốc (FPS Boost)",
-   Callback = function()
-      for _, v in pairs(game:GetDescendants()) do
-         if v:IsA("ParticleEmitter") or v:IsA("Trail") then
-            v.Enabled = false
-         end
-      end
-   end,
-})
-
--- ANTI-AFK (Luôn chạy ngầm)
+-- [[ ANTI-AFK CHUNG ]] --
 task.spawn(function()
     local vu = game:GetService("VirtualUser")
     game:GetService("Players").LocalPlayer.Idled:Connect(function()

@@ -45,35 +45,44 @@ MainTab:CreateToggle({
       end)
    end,
 })
-
 MainTab:CreateToggle({
-   Name = "Auto Collect Potions/Items",
+   Name = "Auto Collect Items (Đã sửa lỗi)",
    CurrentValue = false,
    Flag = "CollectToggle",
    Callback = function(Value)
       _G.AutoPick = Value
       task.spawn(function()
          while _G.AutoPick do
-            local items = workspace:FindFirstChild("Items") or workspace:FindFirstChild("DroppedItems")
-            if items then
-               for _, item in pairs(items:GetChildren()) do
-                  if not _G.AutoPick then break end
-                  local p = item:FindFirstChildWhichIsA("BasePart") or item
-                  if p:IsA("BasePart") then
-                     -- Dùng Tween để né Anti-Cheat thay vì gán CFrame thẳng
-                     local tween = game:GetService("TweenService"):Create(
-                        game.Players.LocalPlayer.Character.HumanoidRootPart,
-                        TweenInfo.new(0.2),
-                        {CFrame = p.CFrame}
-                     )
-                     tween:Play()
-                     firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, p, 0)
-                     task.wait(0.1)
-                     firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, p, 1)
+            -- Tìm kiếm thông minh trong Workspace
+            for _, v in pairs(workspace:GetDescendants()) do
+               if not _G.AutoPick then break end
+               
+               -- Kiểm tra xem có phải là vật phẩm nhặt được không (thường có TouchInterest)
+               if v:IsA("TouchTransmitter") then
+                  local item = v.Parent
+                  -- Kiểm tra tên hoặc thuộc tính để tránh nhặt nhầm cửa hay vật cản
+                  if item and (item:FindFirstChild("Handle") or item:IsA("BasePart")) then
+                     local target = item:FindFirstChild("Handle") or item
+                     
+                     -- Dùng Tween để bay đến nhặt
+                     local char = game.Players.LocalPlayer.Character
+                     if char and char:FindFirstChild("HumanoidRootPart") then
+                        local tween = game:GetService("TweenService"):Create(
+                           char.HumanoidRootPart,
+                           TweenInfo.new(0.3), -- Tốc độ bay tới (0.3 giây)
+                           {CFrame = target.CFrame}
+                        )
+                        tween:Play()
+                        
+                        -- Giả lập chạm
+                        firetouchinterest(char.HumanoidRootPart, target, 0)
+                        task.wait(0.1)
+                        firetouchinterest(char.HumanoidRootPart, target, 1)
+                     end
                   end
                end
             end
-            task.wait(1)
+            task.wait(2) -- Quét lại mỗi 2 giây để tránh lag
          end
       end)
    end,

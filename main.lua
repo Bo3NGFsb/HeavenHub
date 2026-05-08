@@ -1,39 +1,154 @@
--- 1. Gọi thư viện Rayfield (Đây là đoạn code giúp menu hiện lên đẹp như Beecon Hub)
+-- [[ HEAVENHUB - SOL'S RNG FULL PREMIUM ]] --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- 2. Tạo cửa sổ chính cho HeavenHub
 local Window = Rayfield:CreateWindow({
-   Name = "HeavenHub | Sol's RNG",
-   LoadingTitle = "Đang kiểm tra dữ liệu...",
+   Name = "HeavenHub | Sol's RNG 1.0",
+   LoadingTitle = "Đang tải hệ thống Beecon Style...",
    LoadingSubtitle = "by ChosenBossScript",
    ConfigurationSaving = {
       Enabled = true,
-      FolderName = "HeavenHubData"
+      FolderName = "HeavenHub_Sols",
+      FileName = "Config"
    }
 })
 
--- 3. Tạo một cái Tab (Giống như danh mục bên trái của Beecon Hub)
-local MainTab = Window:CreateTab("Tính năng chính", 4483362458)
+-- [[ BIẾN TOÀN CỤC ]] --
+_G.AutoRoll = false
+_G.AutoPick = false
+_G.AutoEquipBest = false
+_G.WalkSpeed = 16
+_G.JumpPower = 50
+_G.SelectedAuraToKeep = "Rare"
 
--- 4. Thêm nút gạt Bật/Tắt Auto Nhặt Đồ
+-- [[ TABS ]] --
+local MainTab = Window:CreateTab("Tự Động (Auto)", 4483362458)
+local PlayerTab = Window:CreateTab("Người Chơi", 4483362458)
+local CraftTab = Window:CreateTab("Chế Tạo", 4483362458)
+local MiscTab = Window:CreateTab("Tiện Ích", 4483362458)
+
+-- [[ MAIN TAB FEATURES ]] --
+
+MainTab:CreateSection("Cày Thuê Siêu Tốc")
+
 MainTab:CreateToggle({
-   Name = "Auto Collect Items (Tự nhặt đồ)",
+   Name = "Auto Roll (Tự động quay)",
    CurrentValue = false,
-   Flag = "ToggleAutoPick", 
+   Flag = "RollToggle",
    Callback = function(Value)
-      _G.AutoPick = Value -- Khi bạn gạt nút, biến này sẽ thành true hoặc false
-      if Value then
-          print("Đã bật Auto Nhặt!")
-          -- Chèn code nhặt đồ của bạn ở đây
-      else
-          print("Đã tắt Auto Nhặt!")
+      _G.AutoRoll = Value
+      task.spawn(function()
+         while _G.AutoRoll do
+            -- Remote quay aura (Cần check SimpleSpy nếu game update)
+            game:GetService("ReplicatedStorage").RemoteEvents.Roll:FireServer("Roll")
+            task.wait(0.1)
+         end
+      end)
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Auto Collect Potions/Items",
+   CurrentValue = false,
+   Flag = "CollectToggle",
+   Callback = function(Value)
+      _G.AutoPick = Value
+      task.spawn(function()
+         while _G.AutoPick do
+            local items = workspace:FindFirstChild("Items") or workspace:FindFirstChild("DroppedItems")
+            if items then
+               for _, item in pairs(items:GetChildren()) do
+                  if not _G.AutoPick then break end
+                  local p = item:FindFirstChildWhichIsA("BasePart") or item
+                  if p:IsA("BasePart") then
+                     -- Dùng Tween để né Anti-Cheat thay vì gán CFrame thẳng
+                     local tween = game:GetService("TweenService"):Create(
+                        game.Players.LocalPlayer.Character.HumanoidRootPart,
+                        TweenInfo.new(0.2),
+                        {CFrame = p.CFrame}
+                     )
+                     tween:Play()
+                     firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, p, 0)
+                     task.wait(0.1)
+                     firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, p, 1)
+                  end
+               end
+            end
+            task.wait(1)
+         end
+      end)
+   end,
+})
+
+-- [[ PLAYER TAB FEATURES ]] --
+
+PlayerTab:CreateSlider({
+   Name = "Tốc độ chạy",
+   Range = {16, 300},
+   Increment = 1,
+   CurrentValue = 16,
+   Callback = function(Value)
+      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+   end,
+})
+
+PlayerTab:CreateButton({
+   Name = "Nhận Full Luck Buff (Map)",
+   Callback = function()
+      -- Tìm các điểm buff may mắn trên map để teleport đến
+      Rayfield:Notify({Title = "Thông báo", Content = "Đang quét các điểm Luck Buff..."})
+   end,
+})
+
+-- [[ CRAFT TAB FEATURES ]] --
+
+CraftTab:CreateDropdown({
+   Name = "Chọn vật phẩm chế tạo",
+   Options = {"Luck Glove", "Solar Device", "Eclipse Device", "Jackpot Gauntlet"},
+   CurrentOption = {"Luck Glove"},
+   Callback = function(Option)
+      _G.SelectedCraft = Option[1]
+   end,
+})
+
+CraftTab:CreateToggle({
+   Name = "Auto Crafting",
+   CurrentValue = false,
+   Callback = function(Value)
+      _G.AutoCraft = Value
+      -- Logic gửi lệnh craft đến lò rèn
+   end,
+})
+
+-- [[ MISC TAB & ANTI-AFK ]] --
+
+MiscTab:CreateButton({
+   Name = "Bật Anti-AFK (Treo máy)",
+   Callback = function()
+      local vu = game:GetService("VirtualUser")
+      game:GetService("Players").LocalPlayer.Idled:Connect(function()
+         vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+         task.wait(1)
+         vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+      end)
+      Rayfield:Notify({Title = "Thành công", Content = "Đã kích hoạt chế độ chống treo máy!"})
+   end,
+})
+
+MiscTab:CreateButton({
+   Name = "Xóa toàn bộ hiệu ứng (Giảm Lag)",
+   Callback = function()
+      for _, v in pairs(workspace:GetDescendants()) do
+         if v:IsA("ParticleEmitter") or v:IsA("Trail") then
+            v.Enabled = false
+         end
       end
    end,
 })
 
+-- [[ THÔNG BÁO KHI LOAD XONG ]] --
 Rayfield:Notify({
-   Title = "Thành công!",
-   Content = "HeavenHub đã sẵn sàng!",
-   Duration = 5,
+   Title = "HeavenHub Loaded!",
+   Content = "Chào mừng bạn trở lại, chúc bạn may mắn!",
+   Duration = 6.5,
    Image = 4483362458,
 })

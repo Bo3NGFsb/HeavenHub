@@ -1,41 +1,34 @@
--- [[ HEAVENHUB - SOL'S RNG ULTIMATE ]] --
+-- [[ HEAVENHUB V3 - FIX TOÀN BỘ LỖI ]] --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "HeavenHub | Sol's RNG",
-   LoadingTitle = "Đang khởi chạy hệ thống...",
+   LoadingTitle = "Đang kiểm tra dữ liệu...",
    LoadingSubtitle = "by ChosenBossScript",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "HeavenHub_Configs"
-   }
+   ConfigurationSaving = { Enabled = false }
 })
 
--- [[ BIẾN ĐIỀU KHIỂN ]] --
+-- Biến điều khiển
 _G.AutoRoll = false
 _G.AutoPick = false
-_G.AntiAFK = true
 
--- [[ TABS ]] --
-local MainTab = Window:CreateTab("Tự Động (Auto)", 4483362458)
-local PlayerTab = Window:CreateTab("Người Chơi", 4483362458)
-local MiscTab = Window:CreateTab("Tiện Ích", 4483362458)
+-- Tab chính
+local MainTab = Window:CreateTab("Tính Năng", 4483362458)
 
--- [[ TÍNH NĂNG AUTO ROLL ]] --
-MainTab:CreateSection("Quay Aura")
-
+-- AUTO ROLL (Đã thêm kiểm tra Remote)
 MainTab:CreateToggle({
-   Name = "Auto Roll (Tự động quay)",
+   Name = "Auto Roll",
    CurrentValue = false,
-   Flag = "AutoRoll",
    Callback = function(Value)
       _G.AutoRoll = Value
       task.spawn(function()
          while _G.AutoRoll do
-            -- Remote cho Sol's RNG
-            local remote = game:GetService("ReplicatedStorage"):FindFirstChild("RemoteEvents") 
-            if remote and remote:FindFirstChild("Roll") then
-                remote.Roll:FireServer()
+            local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Roll", true) or 
+                           game:GetService("ReplicatedStorage"):FindFirstChild("RemoteEvents") and 
+                           game:GetService("ReplicatedStorage").RemoteEvents:FindFirstChild("Roll")
+            
+            if remote then
+                if remote:IsA("RemoteEvent") then remote:FireServer() end
             end
             task.wait(0.1)
          end
@@ -43,101 +36,59 @@ MainTab:CreateToggle({
    end,
 })
 
--- [[ TÍNH NĂNG AUTO PICK (ĐÃ FIX) ]] --
-MainTab:CreateSection("Nhặt Vật Phẩm")
-
+-- AUTO PICK (Cơ chế nhặt đồ chính xác hơn)
 MainTab:CreateToggle({
-   Name = "Auto Pick Potions/Items (Tất cả)",
+   Name = "Auto Pick Potions",
    CurrentValue = false,
-   Flag = "AutoPick",
    Callback = function(Value)
       _G.AutoPick = Value
       task.spawn(function()
          while _G.AutoPick do
-            -- Quét toàn bộ Workspace để tìm đồ rơi
-            for _, v in pairs(workspace:GetDescendants()) do
+            -- Sol's RNG thường để đồ rơi trong Workspace
+            for _, v in pairs(workspace:GetChildren()) do
                if not _G.AutoPick then break end
                
-               -- Kiểm tra xem vật phẩm có thể nhặt được không (TouchTransmitter)
-               if v:IsA("TouchTransmitter") and v.Parent then
-                  local item = v.Parent
-                  local char = game.Players.LocalPlayer.Character
-                  local root = char and char:FindFirstChild("HumanoidRootPart")
-                  
-                  -- Kiểm tra xem item có phải là vật phẩm trong game (né các vùng dịch chuyển)
-                  if item:IsA("BasePart") or item:FindFirstChild("Handle") then
-                     local target = item:IsA("BasePart") and item or item.Handle
-                     
-                     -- Di chuyển đến và nhặt
-                     if root and target then
-                        local oldCFrame = root.CFrame
-                        root.CFrame = target.CFrame
-                        task.wait(0.1) -- Đợi 0.1s để server nhận lệnh nhặt
-                        firetouchinterest(root, target, 0)
-                        firetouchinterest(root, target, 1)
-                        task.wait(0.05)
-                        -- (Tùy chọn) Quay lại vị trí cũ sau khi nhặt
-                        -- root.CFrame = oldCFrame 
-                     end
-                  end
+               -- Kiểm tra xem có phải là vật phẩm không (Thường là Model hoặc Part có tên Potion)
+               if v:IsA("Model") or (v:IsA("BasePart") and v:FindFirstChild("TouchInterest")) then
+                   if v.Name:find("Potion") or v.Name:find("Lucky") or v.Name:find("Coin") then
+                       local target = v:IsA("Model") and (v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")) or v
+                       local char = game.Players.LocalPlayer.Character
+                       
+                       if target and char and char:FindFirstChild("HumanoidRootPart") then
+                           -- Teleport đến và nhặt
+                           char.HumanoidRootPart.CFrame = target.CFrame
+                           task.wait(0.1)
+                           firetouchinterest(char.HumanoidRootPart, target, 0)
+                           task.wait()
+                           firetouchinterest(char.HumanoidRootPart, target, 1)
+                       end
+                   end
                end
             end
-            task.wait(1) -- Quét lại sau mỗi giây
+            task.wait(0.5)
          end
       end)
    end,
 })
 
--- [[ TAB NGƯỜI CHƠI ]] --
-PlayerTab:CreateSlider({
-   Name = "Tốc độ chạy (WalkSpeed)",
-   Range = {16, 250},
-   Increment = 1,
-   CurrentValue = 16,
-   Callback = function(Value)
-      if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-      end
-   end,
-})
-
-PlayerTab:CreateSlider({
-   Name = "Sức nhảy (JumpPower)",
-   Range = {50, 300},
-   Increment = 1,
-   CurrentValue = 50,
-   Callback = function(Value)
-      if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-         game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
-      end
-   end,
-})
-
--- [[ TAB TIỆN ÍCH ]] --
-MiscTab:CreateButton({
-   Name = "Xóa hiệu ứng (Giảm Lag cực mạnh)",
+-- Nút tăng tốc (Fix lỗi lag)
+MainTab:CreateButton({
+   Name = "Tăng Tốc (FPS Boost)",
    Callback = function()
-      for _, v in pairs(workspace:GetDescendants()) do
-         if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Sparkles") then
+      for _, v in pairs(game:GetDescendants()) do
+         if v:IsA("ParticleEmitter") or v:IsA("Trail") then
             v.Enabled = false
          end
       end
-      Rayfield:Notify({Title = "HeavenHub", Content = "Đã tối ưu hóa FPS!"})
    end,
 })
 
--- [[ HỆ THỐNG ANTI-AFK ]] --
-local vu = game:GetService("VirtualUser")
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-   if _G.AntiAFK then
-      vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-      task.wait(1)
-      vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-   end
+-- ANTI-AFK (Luôn chạy ngầm)
+task.spawn(function()
+    local vu = game:GetService("VirtualUser")
+    game:GetService("Players").LocalPlayer.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    end)
 end)
-
-Rayfield:Notify({
-   Title = "HeavenHub đã sẵn sàng!",
-   Content = "Chúc bạn may mắn với các Aura!",
-   Duration = 5,
-})

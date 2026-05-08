@@ -1,59 +1,72 @@
--- HEAVEN HUB V1.1 (SOL'S RNG)
+-- HEAVEN HUB V1.3 (DI CHUYỂN NHƯ NGƯỜI THẬT)
+local PathfindingService = game:GetService("PathfindingService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Giao diện (Rút gọn)
 local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local AutoCollectBtn = Instance.new("TextButton")
+ScreenGui.Parent = game:GetService("CoreGui") or player:WaitForChild("PlayerGui")
+local Btn = Instance.new("TextButton")
+Btn.Size = UDim2.new(0, 200, 0, 50)
+Btn.Position = UDim2.new(0.5, -100, 0.1, 0)
+Btn.Text = "HEAVEN AUTO MOVE: OFF"
+Btn.Parent = ScreenGui
 
--- Tự động chọn nơi hiển thị Menu (Ưu tiên CoreGui, nếu lỗi thì dùng PlayerGui)
-local parentUI = game:GetService("CoreGui") or game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.Parent = parentUI
-
--- Giao diện Menu
-MainFrame.Name = "HeavenHub"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Position = UDim2.new(0.5, -100, 0.5, -75)
-MainFrame.Size = UDim2.new(0, 200, 0, 100)
-MainFrame.Active = true
-MainFrame.Draggable = true -- Nắm chuột kéo menu đi được
-
-Title.Parent = MainFrame
-Title.Text = "HEAVEN HUB V1.1"
-Title.TextColor3 = Color3.fromRGB(255, 255, 0) -- Màu vàng cho sang
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-
-AutoCollectBtn.Parent = MainFrame
-AutoCollectBtn.Text = "BẬT AUTO NHẶT"
-AutoCollectBtn.Size = UDim2.new(0.9, 0, 0, 40)
-AutoCollectBtn.Position = UDim2.new(0.05, 0, 0.45, 0)
-AutoCollectBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-
--- LOGIC NHẶT ĐỒ
 local active = false
-AutoCollectBtn.MouseButton1Click:Connect(function()
+
+-- Hàm để nhân vật tự đi đến một vị trí
+local function walkTo(targetPosition)
+    local path = PathfindingService:CreatePath({
+        AgentCanJump = true, -- Cho phép nhân vật nhảy qua vật cản
+        WaypointSpacing = 2
+    })
+    
+    path:ComputeAsync(rootPart.Position, targetPosition)
+    
+    if path.Status == Enum.PathStatus.Success then
+        local waypoints = path:GetWaypoints()
+        for _, waypoint in pairs(waypoints) do
+            if not active then break end
+            if waypoint.Action == Enum.PathWaypointAction.Jump then
+                humanoid.Jump = true
+            end
+            humanoid:MoveTo(waypoint.Position)
+            humanoid.MoveToFinished:Wait() -- Đợi đi đến điểm hiện tại mới đi tiếp
+        end
+    else
+        -- Nếu không tìm được đường đi phức tạp, cứ đi thẳng tới đó
+        humanoid:MoveTo(targetPosition)
+    end
+end
+
+Btn.MouseButton1Click:Connect(function()
     active = not active
+    Btn.Text = active and "HEAVEN AUTO MOVE: ON" or "HEAVEN AUTO MOVE: OFF"
+    
     if active then
-        AutoCollectBtn.Text = "AUTO: ĐANG CHẠY"
-        AutoCollectBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-        
-        -- Chạy vòng lặp nhặt đồ ngầm
         task.spawn(function()
             while active do
-                -- Quét toàn bộ map để tìm vật phẩm có thể nhặt (TouchInterest)
+                local targetEgg = nil
+                
+                -- Tìm quả trứng gần nhất
                 for _, v in pairs(game.Workspace:GetDescendants()) do
                     if v:IsA("TouchTransmitter") and v.Parent and v.Parent:IsA("BasePart") then
-                        local item = v.Parent
-                        -- Dịch chuyển bạn đến vật phẩm
-                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = item.CFrame
-                        task.wait(0.2) -- Đợi một chút để game nhận diện
+                        targetEgg = v.Parent
+                        break -- Ưu tiên quả trứng đầu tiên tìm thấy
                     end
                 end
-                task.wait(1) -- Quét lại sau mỗi 1 giây
+
+                if targetEgg then
+                    print("Đã thấy trứng! Đang đi tới...")
+                    walkTo(targetEgg.Position)
+                    task.wait(0.5) -- Đợi nhặt xong
+                end
+                
+                task.wait(1) -- Quét lại sau mỗi giây
             end
         end)
-    else
-        AutoCollectBtn.Text = "BẬT AUTO NHẶT"
-        AutoCollectBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
     end
 end)

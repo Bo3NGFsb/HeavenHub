@@ -45,6 +45,7 @@ MainTab:CreateToggle({
       end)
    end,
 })
+
 MainTab:CreateToggle({
    Name = "Auto Collect Items (Đã sửa lỗi)",
    CurrentValue = false,

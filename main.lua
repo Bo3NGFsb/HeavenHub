@@ -1,16 +1,16 @@
 local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
-local HeavenHubWindow = Library:NewWindow("HEAVENHUB V1")
+local PhantomForcesWindow = Library:NewWindow("heaven.chosen")
 
-local KillingCheats = HeavenHubWindow:NewSection("🎯 Combat")
+local KillingCheats = PhantomForcesWindow:NewSection("🎯 Combat")
 
-KillingCheats:CreateButton("Auto Parry (Heaven)", function()
+KillingCheats:CreateButton("Auto Parry", function()
 local Debug = false -- Set this to true if you want my debug output.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9) 
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9) -- A second argument in waitforchild what could it mean?
 local Balls = workspace:WaitForChild("Balls", 9e9)
 
 -- Functions
@@ -50,16 +50,16 @@ Balls.ChildAdded:Connect(function(Ball)
     Ball:GetPropertyChangedSignal("Position"):Connect(function()
         if IsTarget() then -- No need to do the math if we're not being attacked.
             local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local Velocity = (OldPosition - Ball.Position).Magnitude 
+            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
             
             print(`Distance: {Distance}\nVelocity: {Velocity}\nTime: {Distance / Velocity}`)
         
-            if (Distance / Velocity) <= 10 then 
+            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
                 Parry()
             end
         end
         
-        if (tick() - OldTick >= 1/60) then 
+        if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.
             OldTick = tick()
             OldPosition = Ball.Position
         end
@@ -67,7 +67,7 @@ Balls.ChildAdded:Connect(function(Ball)
 end)
 end)
 
-KillingCheats:CreateButton("Auto Win (Heaven)", function()
+KillingCheats:CreateButton("Auto Win", function()
 getgenv().god = true
 while getgenv().god and task.wait() do
     for _,ball in next, workspace.Balls:GetChildren() do
@@ -84,11 +84,11 @@ while getgenv().god and task.wait() do
 end
 end)
 
-KillingCheats:CreateButton("Auto Spam (Heaven)", function()
+KillingCheats:CreateButton("Auto Spam", function()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Code4Zaaa/X7Project/main/Game/AutoParryOnly"))();
 end)
 
-KillingCheats:CreateButton("Auto Detect Spam (Heaven)", function()
+KillingCheats:CreateButton("Auto Detect Spam", function()
 getgenv().AutoDetectSpam = true
 
 --///////////////////////////////////////////////////////////////////--
@@ -204,6 +204,6 @@ Balls.ChildAdded:Connect(function(ball)
 end)
 end)
 
-KillingCheats:CreateButton("Made by HEAVENHUB", function()
-print("HeavenHub Version 1.0 Loaded")
+KillingCheats:CreateButton("Made by bo3NGFsb", function()
+print("SuckMyD")
 end)

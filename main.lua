@@ -1,212 +1,209 @@
+local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local HeavenHubWindow = Library:NewWindow("HEAVENHUB V1")
 
-local Window = Rayfield:CreateWindow({
-   Name = "HEAVENHUB V1",
-   LoadingTitle = "HEAVENHUB: KINETIC SYNC",
-   LoadingSubtitle = "Jump & Velocity Overdrive Active",
-   ConfigurationSaving = { Enabled = false }
-})
+local KillingCheats = HeavenHubWindow:NewSection("🎯 Combat")
 
--- TABS
-local MainTab = Window:CreateTab("Combat & Movement", 4483362458)
-local VisualsTab = Window:CreateTab("Visuals (ESP)", 4483362458)
+KillingCheats:CreateButton("Auto Parry (Heaven)", function()
+local Debug = false -- Set this to true if you want my debug output.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 
--- STEALTH TOGGLE (Tap top-middle of screen to show/hide menu)
-local InvisibleToggle = Instance.new("ScreenGui", game.CoreGui)
-local InvisibleButton = Instance.new("TextButton", InvisibleToggle)
-InvisibleButton.BackgroundTransparency = 1
-InvisibleButton.Position = UDim2.new(0.4, 0, 0, 0)
-InvisibleButton.Size = UDim2.new(0.2, 0, 0, 50)
-InvisibleButton.Text = ""
-InvisibleButton.ZIndex = 100
-InvisibleButton.MouseButton1Click:Connect(function()
-    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.RightControl, false, game)
-end)
+local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9) 
+local Balls = workspace:WaitForChild("Balls", 9e9)
 
---- ==========================================
---- KINETIC OVERRIDE (Speed & Jump Hack)
---- ==========================================
-local MovementSection = MainTab:CreateSection("Kinetic Manipulation")
-local WalkMultiplier = 0
-local SprintMultiplier = 0
-local JumpForce = 0
-local NoclipActive = false
+-- Functions
 
-MainTab:CreateSlider({
-   Name = "Walk Multiplier",
-   Range = {0, 10}, 
-   Increment = 0.1,
-   CurrentValue = 0,
-   Callback = function(Value) WalkMultiplier = Value end,
-})
-
-MainTab:CreateSlider({
-   Name = "Sprint Multiplier",
-   Range = {0, 15}, 
-   Increment = 0.1,
-   CurrentValue = 0,
-   Callback = function(Value) SprintMultiplier = Value end,
-})
-
-MainTab:CreateSlider({
-   Name = "Jump Force (Hack)",
-   Range = {0, 100},
-   Increment = 1,
-   CurrentValue = 0,
-   Callback = function(Value) JumpForce = Value end,
-})
-
-MainTab:CreateToggle({
-   Name = "Noclip (Phase Walls)",
-   CurrentValue = false,
-   Flag = "NoclipTog",
-   Callback = function(Value) NoclipActive = Value end,
-})
-
--- 1. Jump Hack Logic (Physical Velocity Impulse)
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") and JumpForce > 0 then
-        char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, JumpForce, char.HumanoidRootPart.Velocity.Z)
+local function print(...) -- Debug print.
+    if Debug then
+        warn(...)
     end
-end)
+end
 
--- 2. Movement & Collision Loop
-game:GetService("RunService").Stepped:Connect(function()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
-        local hum = char.Humanoid
-        local root = char.HumanoidRootPart
+local function VerifyBall(Ball) -- Returns nil if the ball isn't a valid projectile; true if it's the right ball.
+    if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
+        return true
+    end
+end
+
+local function IsTarget() -- Returns true if we are the current target.
+    return (Player.Character and Player.Character:FindFirstChild("Highlight"))
+end
+
+local function Parry() -- Parries.
+    Remotes:WaitForChild("ParryButtonPress"):Fire()
+end
+
+-- The actual code
+
+Balls.ChildAdded:Connect(function(Ball)
+    if not VerifyBall(Ball) then
+        return
+    end
+    
+    print(`Ball Spawned: {Ball}`)
+    
+    local OldPosition = Ball.Position
+    local OldTick = tick()
+    
+    Ball:GetPropertyChangedSignal("Position"):Connect(function()
+        if IsTarget() then -- No need to do the math if we're not being attacked.
+            local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
+            local Velocity = (OldPosition - Ball.Position).Magnitude 
+            
+            print(`Distance: {Distance}\nVelocity: {Velocity}\nTime: {Distance / Velocity}`)
         
-        -- Physical Movement Bypass (Speed Fix)
-        if hum.MoveDirection.Magnitude > 0 then
-            local isSprinting = hum.WalkSpeed > 20 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift)
-            local activeForce = isSprinting and SprintMultiplier or WalkMultiplier
-            if activeForce > 0 then
-                root.CFrame = root.CFrame + (hum.MoveDirection * activeForce)
+            if (Distance / Velocity) <= 10 then 
+                Parry()
             end
         end
         
-        -- Noclip Logic
-        if NoclipActive then
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
+        if (tick() - OldTick >= 1/60) then 
+            OldTick = tick()
+            OldPosition = Ball.Position
+        end
+    end)
+end)
+end)
+
+KillingCheats:CreateButton("Auto Win (Heaven)", function()
+getgenv().god = true
+while getgenv().god and task.wait() do
+    for _,ball in next, workspace.Balls:GetChildren() do
+        if ball then
+            if game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.Position, ball.Position)
+                if game:GetService("Players").LocalPlayer.Character:FindFirstChild("Highlight") then
+                    game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame = ball.CFrame * CFrame.new(0, 0, (ball.Velocity).Magnitude * -0.5)
+                    game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+                end
             end
         end
     end
+end
 end)
 
---- ==========================================
---- COMBAT PROTOCOLS (Attack & Defense)
---- ==========================================
-local CombatSection = MainTab:CreateSection("Combat Protocols")
-local AutoAttack = false
-local TargetPlayer = nil
+KillingCheats:CreateButton("Auto Spam (Heaven)", function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Code4Zaaa/X7Project/main/Game/AutoParryOnly"))();
+end)
 
-MainTab:CreateToggle({
-   Name = "Neural Strike (Auto-Attack)",
-   CurrentValue = false,
-   Callback = function(Value)
-      AutoAttack = Value
-      task.spawn(function()
-          while AutoAttack do
-              pcall(function()
-                  local weapon = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                  if weapon then weapon:Activate() end
-              end)
-              task.wait(0.1)
-          end
-      end)
-   end,
-})
+KillingCheats:CreateButton("Auto Detect Spam (Heaven)", function()
+getgenv().AutoDetectSpam = true
 
-MainTab:CreateToggle({
-   Name = "Auto-Block (Guest 1337)",
-   CurrentValue = false,
-   Callback = function(Value)
-      if Value then
-          task.spawn(function()
-              while Value do
-                  local Guest = game.Players:FindFirstChild("Guest 1337")
-                  if Guest then game.StarterGui:SetCore("PromptBlockPlayer", Guest) end
-                  task.wait(5)
-              end
-          end)
+--///////////////////////////////////////////////////////////////////--
+
+local Alive = workspace:WaitForChild("Alive", 9e9)
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9)
+local ParryAttempt = Remotes:WaitForChild("ParryAttempt", 9e9)
+local Balls = workspace:WaitForChild("Balls", 9e9)
+
+--///////////////////////////////////////////////////////////////////--
+
+local function get_ProxyPlayer()
+  local Distance = math.huge
+  local plrRP = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+  local PlayerReturn = nil
+  
+  for _,plr1 in pairs(Alive:GetChildren()) do
+    if plr1:FindFirstChild("Humanoid") and plr1.Humanoid.Health > 50 then
+      if plr1.Name ~= Player.Name and plrRP and plr1:FindFirstChild("HumanoidRootPart") then
+        local magnitude = (plr1.HumanoidRootPart.Position - plrRP.Position).Magnitude
+        if magnitude <= Distance then
+          Distance = magnitude
+          PlayerReturn = plr1
+        end
       end
-   end,
-})
+    end
+  end
+  return PlayerReturn
+end
 
---- ==========================================
---- TARGETING SUITE
---- ==========================================
-local TargetSection = MainTab:CreateSection("Targeting Suite")
-
-local TargetDropdown = MainTab:CreateDropdown({
-   Name = "Select Player",
-   Options = {"None"},
-   Callback = function(Option) TargetPlayer = game.Players:FindFirstChild(Option[1]) end,
-})
-
-MainTab:CreateButton({
-   Name = "Scan Players (Refresh List)",
-   Callback = function()
-      local List = {}
-      for _, p in pairs(game.Players:GetPlayers()) do
-          if p ~= game.Players.LocalPlayer then table.insert(List, p.Name) end
+local function SuperClick()
+  task.spawn(function()
+    if IsAlive() and #Alive:GetChildren() > 1 then
+      local args1 = 0.5
+      local args2 = CFrame.new()
+      local args3 = {["enzo"] = Vector3.new()}
+      local args4 = {500, 500}
+      
+      if args1 and args2 and args3 and args4 then
+        ParryAttempt:FireServer(args1, args2, args3, args4)
       end
-      TargetDropdown:Refresh(List)
-   end,
-})
+    end
+  end)
+end
 
-MainTab:CreateButton({
-   Name = "Neural Warp (Teleport)",
-   Callback = function()
-      if TargetPlayer and TargetPlayer.Character then
-          game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+task.spawn(function()
+  while task.wait() do
+    if getgenv().SpamClickA and getgenv().AutoDetectSpam then
+      SuperClick()
+    end
+  end
+end)
+
+local ParryCounter = 0
+local DetectSpamDistance = 0
+
+local function GetBall(ball)
+  local Target = ""
+  
+  ball:GetPropertyChangedSignal("Position"):Connect(function()
+    local PlayerPP = Player and Player.Character and Player.Character.PrimaryPart
+    local NearestPlayer = get_ProxyPlayer()
+    
+    if ball and PlayerPP and NearestPlayer and NearestPlayer.PrimaryPart then
+      local PlayerDistance = (PlayerPP.Position - NearestPlayer.PrimaryPart.Position).Magnitude
+      local BallDistance = (PlayerPP.Position - ball.Position).Magnitude
+      
+      DetectSpamDistance = 25 + math.clamp(ParryCounter / 3, 0, 25)
+      
+      if ParryCounter > 2 and PlayerDistance < DetectSpamDistance and BallDistance < 55 then
+        getgenv().SpamClickA = true
+      else
+        getgenv().SpamClickA = false
       end
-   end,
-})
-
---- ==========================================
---- DETECTION SYSTEMS (ESP)
---- ==========================================
-local VisualsSection = VisualsTab:CreateSection("Detection Sync")
-
-VisualsTab:CreateToggle({
-   Name = "Player ESP (Neon Green)",
-   CurrentValue = false,
-   Callback = function(Value)
-      for _, p in pairs(game.Players:GetPlayers()) do
-          if p ~= game.Players.LocalPlayer and p.Character then
-              if Value then
-                  local High = Instance.new("Highlight", p.Character)
-                  High.Name = "HeavenHubESP"
-                  High.FillColor = Color3.fromRGB(0, 255, 0)
-              else
-                  if p.Character:FindFirstChild("HeavenHubESP") then p.Character.HeavenHubESP:Destroy() end
-              end
-          end
+    end
+  end)
+  ball:GetAttributeChangedSignal("target"):Connect(function()
+    Target = ball:GetAttribute("target")
+    local NearestPlayer = get_ProxyPlayer()
+    
+    if NearestPlayer then
+      if Target == NearestPlayer.Name or Target == Player.Name then
+        ParryCounter = ParryCounter + 1
+      else
+        ParryCounter = 0
       end
-   end,
-})
+    end
+  end)
+end
 
-VisualsTab:CreateToggle({
-   Name = "Generator ESP (Deep Blue)",
-   CurrentValue = false,
-   Callback = function(Value)
-      for _, obj in pairs(game.Workspace:GetDescendants()) do
-          if obj.Name == "Generator" then
-              if Value then
-                  local High = Instance.new("Highlight", obj)
-                  High.Name = "GenHighlight"
-                  High.FillColor = Color3.fromRGB(0, 0, 150)
-              else
-                  if obj:FindFirstChild("GenHighlight") then obj.GenHighlight:Destroy() end
-              end
-          end
-      end
-   end,
-})
+for _,ball in pairs(Balls:GetChildren()) do
+  if ball and not ball:GetAttribute("realBall") then
+    return
+  end
+  
+  GetBall(ball)
+end
 
-Rayfield:Notify({Title = "V1 READY", Content = "HEAVENHUB modules are synchronized.", Duration = 5})
+Balls.ChildAdded:Connect(function(ball)
+  if not getgenv().AutoDetectSpam then
+    return
+  elseif ball and not ball:GetAttribute("realBall") then
+    return
+  end
+  
+  getgenv().SpamClickA = false
+  ParryCounter = 0
+  GetBall(ball)
+end)
+end)
+
+KillingCheats:CreateButton("Made by HEAVENHUB", function()
+print("HeavenHub Version 1.0 Loaded")
+end)

@@ -1,91 +1,81 @@
--- [[ HEAVENHUB - BLADE BALL AUTO PARRY ]] --
-repeat task.wait(0) until game:IsLoaded()
-
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
-local Window = Rayfield:CreateWindow({
-   Name = "HeavenHub | Blade Ball",
-   LoadingTitle = "Đang khởi chạy Blade Ball Hack...",
-   LoadingSubtitle = "by ChosenBossScript",
-   ConfigurationSaving = { Enabled = true, FolderName = "HeavenHub_BladeBall" }
-})
-
--- [[ BIẾN ĐIỀU KHIỂN ]] --
-_G.AutoParry = false
-_G.Distance = 20
-_G.AutoSpam = false
-
--- [[ TAB 1: CHIẾN ĐẤU (COMBAT) ]] --
-local CombatTab = Window:CreateTab("⚔️ Combat", 4483362458)
-
-CombatTab:CreateSection("Main Features")
-
-CombatTab:CreateToggle({
-   Name = "Auto Parry (Tự động đỡ)",
-   CurrentValue = false,
-   Callback = function(Value)
-      _G.AutoParry = Value
-   end,
-})
-
-CombatTab:CreateSlider({
-   Name = "Parry Distance (Khoảng cách)",
-   Range = {10, 100},
-   Increment = 1,
-   CurrentValue = 20,
-   Callback = function(Value)
-      _G.Distance = Value
-   end,
-})
-
-CombatTab:CreateToggle({
-   Name = "Auto Spam Parry",
-   CurrentValue = false,
-   Callback = function(Value)
-      _G.AutoSpam = Value
-   end,
-})
-
--- [[ THUẬT TOÁN XỬ LÝ (BACKEND) ]] --
+-- HEAVEN HUB V2.0 (FORSAKEN SURVIVAL - ESP & AUTO REPAIR)
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = game:GetService("Players").LocalPlayer
+local localPlayer = Players.LocalPlayer
 
--- Bạn cần thay đổi cái này sau khi dùng RemoteSpy
-local ParryRemote = ReplicatedStorage:FindFirstChild("ParryAttempt", true) 
+-- UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game:GetService("CoreGui") or localPlayer:WaitForChild("PlayerGui")
 
--- Vòng lặp chính xử lý đỡ bóng
-RunService.PreRender:Connect(function()
-    if not _G.AutoParry then return end
-    
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    
-    -- Tìm quả bóng (Blade Ball thường để bóng trong Workspace)
-    local ball = workspace:FindFirstChild("Ball") or workspace:FindFirstChildWhichIsA("BasePart", true)
-    
-    if root and ball and ball.Name == "Ball" then
-        local dist = (root.Position - ball.Position).Magnitude
-        local velocity = ball.AssemblyLinearVelocity
-        local ballDir = (root.Position - ball.Position).Unit
-        local dot = velocity.Unit:Dot(ballDir)
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 220, 0, 120)
+Frame.Position = UDim2.new(0.5, -110, 0.05, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = ScreenGui
 
-        -- Điều kiện đỡ: Khoảng cách < tùy chỉnh VÀ bóng đang bay về phía mình
-        if dist <= _G.Distance and dot > 0 then
-            if ParryRemote then
-                ParryRemote:FireServer()
+local ESPBtn = Instance.new("TextButton")
+ESPBtn.Size = UDim2.new(0.9, 0, 0.4, 0)
+ESPBtn.Position = UDim2.new(0.05, 0, 0.1, 0)
+ESPBtn.Text = "BẬT NHÌN XUYÊN TƯỜNG"
+ESPBtn.Parent = Frame
+
+local RepairBtn = Instance.new("TextButton")
+RepairBtn.Size = UDim2.new(0.9, 0, 0.4, 0)
+RepairBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
+RepairBtn.Text = "AUTO SỬA MÁY: OFF"
+RepairBtn.Parent = Frame
+
+-- 1. LOGIC NHÌN XUYÊN TƯỜNG (ESP)
+local espEnabled = false
+local function createESP(player)
+    if player ~= localPlayer and player.Character then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "HeavenESP"
+        highlight.FillColor = player.TeamColor.Color or Color3.fromRGB(255, 0, 0)
+        highlight.FillOpacity = 0.5
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.Parent = player.Character
+    end
+end
+
+ESPBtn.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    ESPBtn.Text = espEnabled and "ĐANG HIỆN NGƯỜI CHƠI" or "BẬT NHÌN XUYÊN TƯỜNG"
+    if espEnabled then
+        for _, p in pairs(Players:GetPlayers()) do createESP(p) end
+    else
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("HeavenESP") then
+                p.Character.HeavenESP:Destroy()
             end
-        end
-        
-        -- Chế độ Spam khi bóng cực gần (dưới 10m)
-        if _G.AutoSpam and dist <= 10 then
-            ParryRemote:FireServer()
         end
     end
 end)
 
-Rayfield:Notify({
-   Title = "HeavenHub Ready",
-   Content = "Bản hack Blade Ball đã sẵn sàng!",
-   Duration = 5
-})
+-- 2. LOGIC AUTO SỬA MÁY PHÁT ĐIỆN (AUTO REPAIR)
+local repairActive = false
+RepairBtn.MouseButton1Click:Connect(function()
+    repairActive = not repairActive
+    RepairBtn.Text = repairActive and "AUTO SỬA MÁY: ON" or "AUTO SỬA MÁY: OFF"
+    
+    task.spawn(function()
+        while repairActive do
+            -- Tìm máy phát điện gần nhất (Thường tên là Generator hoặc chứa ProximityPrompt)
+            for _, v in pairs(game.Workspace:GetDescendants()) do
+                if v:IsA("ProximityPrompt") and (v.Parent.Name:lower():find("gen") or v.ObjectText:lower():find("gen")) then
+                    -- Đi tới máy phát điện
+                    local char = localPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.CFrame = v.Parent.CFrame * CFrame.new(0, 0, 3)
+                        task.wait(0.2)
+                        -- Kích hoạt sửa máy
+                        fireproximityprompt(v)
+                    end
+                end
+            end
+            task.wait(1)
+        end
+    end)
+end)

@@ -1,106 +1,76 @@
--- HEAVEN HUB V2.4 (FIX UI & ESP COLORS)
+-- HEAVEN HUB V2.7 (FORSAKEN - FINAL STABLE)
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
-local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
--- Xóa UI cũ nếu có để tránh kẹt
-if CoreGui:FindFirstChild("HeavenHubV2") then
-    CoreGui.HeavenHubV2:Destroy()
+-- 1. LÀM ĐẸP UI ĐÃ HIỆN
+local sg = game:GetService("CoreGui"):FindFirstChild("HeavenSimple") or game:GetService("PlayerGui"):FindFirstChild("HeavenSimple")
+local mainBtn = sg and sg:FindFirstChildOfClass("TextButton")
+
+if mainBtn then
+    mainBtn.Text = "HEAVEN HUB: READY"
+    mainBtn.Font = Enum.Font.GothamBold
+    mainBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 end
 
--- TẠO GIAO DIỆN (Đưa ra ngoài vòng lặp để chắc chắn hiện lên)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "HeavenHubV2"
-ScreenGui.Parent = CoreGui
+local active = false
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 200, 0, 110)
-Frame.Position = UDim2.new(0.5, -100, 0.2, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BorderSizePixel = 2
-Frame.Active = true
-Frame.Draggable = true
-Frame.Parent = ScreenGui
-
-local ESPBtn = Instance.new("TextButton")
-ESPBtn.Size = UDim2.new(0.9, 0, 0.4, 0)
-ESPBtn.Position = UDim2.new(0.05, 0, 0.1, 0)
-ESPBtn.Text = "ESP: OFF"
-ESPBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPBtn.Parent = Frame
-
-local RepairBtn = Instance.new("TextButton")
-RepairBtn.Size = UDim2.new(0.9, 0, 0.4, 0)
-RepairBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
-RepairBtn.Text = "AUTO REPAIR: OFF"
-RepairBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-RepairBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RepairBtn.Parent = Frame
-
--- BIẾN ĐIỀU KHIỂN
-local espActive = false
-local repairActive = false
-
-ESPBtn.MouseButton1Click:Connect(function()
-    espActive = not espActive
-    ESPBtn.Text = espActive and "ESP: ON" or "ESP: OFF"
-    ESPBtn.BackgroundColor3 = espActive and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(50, 50, 50)
-end)
-
-RepairBtn.MouseButton1Click:Connect(function()
-    repairActive = not repairActive
-    RepairBtn.Text = repairActive and "REPAIR: ON" or "REPAIR: OFF"
-    RepairBtn.BackgroundColor3 = repairActive and Color3.fromRGB(0, 100, 150) or Color3.fromRGB(50, 50, 50)
-end)
-
--- HÀM KIỂM TRA KILLER
-local function getRoleColor(player)
-    if player.Character then
-        -- Kiểm tra tên Team hoặc các Folder đặc biệt của Killer trong Forsaken
-        if player.Team and (player.Team.Name:lower():find("kill") or player.Team.Name:lower():find("monster")) then
-            return Color3.fromRGB(255, 0, 0) -- Đỏ
-        elseif player.Character:FindFirstChild("Knife") or player.Character:FindFirstChild("Weapon") then
-            return Color3.fromRGB(255, 0, 0) -- Đỏ
+-- 2. HÀM ESP PHÂN BIỆT RÕ RÀNG
+local function updateESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= localPlayer and p.Character then
+            local char = p.Character
+            local hl = char:FindFirstChild("HeavenHL") or Instance.new("Highlight", char)
+            hl.Name = "HeavenHL"
+            hl.Enabled = active
+            
+            -- Logic nhận diện vai trò trong Forsaken
+            local isKiller = false
+            -- Kiểm tra nếu cầm dao, súng hoặc team Killer
+            if char:FindFirstChildOfClass("Tool") or (p.Team and p.Team.Name:lower():find("kill")) or char:FindFirstChild("Knife") then
+                isKiller = true
+            end
+            
+            if isKiller then
+                hl.FillColor = Color3.fromRGB(255, 0, 0) -- ĐỎ CHO KILLER
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+            else
+                hl.FillColor = Color3.fromRGB(0, 255, 0) -- XANH LÁ CHO SURVIVAL
+                hl.OutlineColor = Color3.fromRGB(0, 0, 0)
+            end
+            hl.FillOpacity = 0.5
         end
     end
-    return Color3.fromRGB(0, 255, 0) -- Mặc định Xanh lá (Survival)
 end
 
--- VÒNG LẶP XỬ LÝ (Tách ra để không làm lag UI)
-task.spawn(function()
-    while true do
-        if espActive then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= localPlayer and p.Character then
-                    local hl = p.Character:FindFirstChild("HeavenHighlight") or Instance.new("Highlight")
-                    hl.Name = "HeavenHighlight"
-                    hl.Parent = p.Character
-                    hl.Enabled = true
-                    hl.FillColor = getRoleColor(p)
-                    hl.FillOpacity = 0.5
-                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                end
-            end
-        else
-            -- Tắt ESP
-            for _, p in pairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("HeavenHighlight") then
-                    p.Character.HeavenHighlight:Destroy()
+-- 3. AUTO REPAIR (SỬA MÁY KHI LẠI GẦN)
+local function handleRepair()
+    if not active then return end
+    local char = localPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        for _, v in pairs(game.Workspace:GetDescendants()) do
+            if v:IsA("ProximityPrompt") then
+                -- Kiểm tra khoảng cách 12 studs (khoảng 3-4 mét trong game)
+                local dist = (char.HumanoidRootPart.Position - v.Parent:GetPivot().Position).Magnitude
+                if dist < 12 then
+                    fireproximityprompt(v)
                 end
             end
         end
-
-        if repairActive and localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            for _, v in pairs(game.Workspace:GetDescendants()) do
-                if v:IsA("ProximityPrompt") then
-                    local dist = (localPlayer.Character.HumanoidRootPart.Position - v.Parent:GetPivot().Position).Magnitude
-                    if dist < 12 then
-                        fireproximityprompt(v)
-                    end
-                end
-            end
-        end
-        task.wait(0.5) -- Quét vừa phải để tránh bị game chặn
     end
+end
+
+-- KÍCH HOẠT KHI BẤM NÚT
+if mainBtn then
+    mainBtn.MouseButton1Click:Connect(function()
+        active = not active
+        mainBtn.Text = active and "HUB: ON (ENJOY!)" or "HUB: OFF"
+        mainBtn.BackgroundColor3 = active and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(30, 30, 30)
+    end)
+end
+
+-- VÒNG LẶP CHÍNH
+RunService.Heartbeat:Connect(function()
+    updateESP()
+    handleRepair()
 end)

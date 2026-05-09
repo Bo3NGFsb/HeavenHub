@@ -1,21 +1,19 @@
--- [[ HEAVENHUB - FORSAKEN KINETIC SYNC ]] --
--- Optimized by ChosenBossScript
+-- [[ HEAVENHUB UNIVERSAL V1 - MODIFIED EDITION ]] --
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "HEAVENHUB | FORSAKEN V1",
-   LoadingTitle = "HEAVENHUB: KINETIC OVERDRIVE",
-   LoadingSubtitle = "Synchronizing Velocity Modules...",
-   ConfigurationSaving = { Enabled = true, FolderName = "HeavenHub_Forsaken" }
+   Name = "HEAVENHUB | UNIVERSAL V1",
+   LoadingTitle = "HEAVENHUB: KINETIC SYNC",
+   LoadingSubtitle = "Hệ thống nhảy và vận tốc đã sẵn sàng",
+   ConfigurationSaving = { Enabled = false }
 })
 
 -- TABS
-local MainTab = Window:CreateTab("🚀 Movement", 4483362458)
-local CombatTab = Window:CreateTab("⚔️ Combat", 4483362458)
-local VisualsTab = Window:CreateTab("👁️ Visuals", 4483362458)
+local MainTab = Window:CreateTab("🏠 Combat & Movement", 4483362458)
+local VisualsTab = Window:CreateTab("👁️ Visuals (ESP)", 4483362458)
 
--- STEALTH TOGGLE (Nút tàng hình ở giữa trên màn hình để đóng/mở Menu)
+-- NÚT ẨN MENU (Chạm vào giữa phía trên màn hình để hiện/ẩn menu bằng phím RightControl)
 local InvisibleToggle = Instance.new("ScreenGui", game.CoreGui)
 local InvisibleButton = Instance.new("TextButton", InvisibleToggle)
 InvisibleButton.BackgroundTransparency = 1
@@ -28,16 +26,16 @@ InvisibleButton.MouseButton1Click:Connect(function()
 end)
 
 --- ==========================================
---- KINETIC OVERRIDE (Speed & Jump)
+--- KINETIC OVERRIDE (Tốc độ & Nhảy cao)
 --- ==========================================
-local MovementSection = MainTab:CreateSection("Kinetic Manipulation")
+local MovementSection = MainTab:CreateSection("Điều Khiển Vận Tốc")
 local WalkMultiplier = 0
 local SprintMultiplier = 0
 local JumpForce = 0
 local NoclipActive = false
 
 MainTab:CreateSlider({
-   Name = "Walk Multiplier",
+   Name = "Walk Speed Multi (Tăng tốc đi bộ)",
    Range = {0, 10}, 
    Increment = 0.1,
    CurrentValue = 0,
@@ -45,7 +43,7 @@ MainTab:CreateSlider({
 })
 
 MainTab:CreateSlider({
-   Name = "Sprint Multiplier",
+   Name = "Sprint Speed Multi (Tăng tốc chạy)",
    Range = {0, 15}, 
    Increment = 0.1,
    CurrentValue = 0,
@@ -53,7 +51,7 @@ MainTab:CreateSlider({
 })
 
 MainTab:CreateSlider({
-   Name = "Jump Impulse (Height)",
+   Name = "Jump Force Hack (Lực nhảy)",
    Range = {0, 100},
    Increment = 1,
    CurrentValue = 0,
@@ -61,12 +59,13 @@ MainTab:CreateSlider({
 })
 
 MainTab:CreateToggle({
-   Name = "Noclip (Phase Walls)",
+   Name = "Noclip (Đi xuyên tường)",
    CurrentValue = false,
+   Flag = "NoclipTog",
    Callback = function(Value) NoclipActive = Value end,
 })
 
--- Jump Logic
+-- Logic Nhảy Cao (Tác động vật lý trực tiếp)
 game:GetService("UserInputService").JumpRequest:Connect(function()
     local char = game.Players.LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") and JumpForce > 0 then
@@ -74,13 +73,14 @@ game:GetService("UserInputService").JumpRequest:Connect(function()
     end
 end)
 
--- Movement Loop
+-- Vòng lặp di chuyển và Noclip
 game:GetService("RunService").Stepped:Connect(function()
     local char = game.Players.LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
         local hum = char.Humanoid
         local root = char.HumanoidRootPart
         
+        -- Hack Speed (Bypass vật lý)
         if hum.MoveDirection.Magnitude > 0 then
             local isSprinting = hum.WalkSpeed > 20 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift)
             local activeForce = isSprinting and SprintMultiplier or WalkMultiplier
@@ -89,6 +89,7 @@ game:GetService("RunService").Stepped:Connect(function()
             end
         end
         
+        -- Logic Noclip
         if NoclipActive then
             for _, part in pairs(char:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
@@ -98,14 +99,14 @@ game:GetService("RunService").Stepped:Connect(function()
 end)
 
 --- ==========================================
---- COMBAT PROTOCOLS
+--- COMBAT PROTOCOLS (Tấn công & Phòng thủ)
 --- ==========================================
-local CombatSection = CombatTab:CreateSection("Assault Modules")
+local CombatSection = MainTab:CreateSection("Giao Thức Chiến Đấu")
 local AutoAttack = false
 local TargetPlayer = nil
 
-CombatTab:CreateToggle({
-   Name = "Neural Strike (Auto-Attack)",
+MainTab:CreateToggle({
+   Name = "Heaven Strike (Auto-Clicker)",
    CurrentValue = false,
    Callback = function(Value)
       AutoAttack = Value
@@ -121,15 +122,19 @@ CombatTab:CreateToggle({
    end,
 })
 
-local TargetSection = CombatTab:CreateSection("Targeting Suite")
-local TargetDropdown = CombatTab:CreateDropdown({
-   Name = "Select Target",
+--- ==========================================
+--- TARGETING SUITE (Dò tìm đối thủ)
+--- ==========================================
+local TargetSection = MainTab:CreateSection("Hệ Thống Mục Tiêu")
+
+local TargetDropdown = MainTab:CreateDropdown({
+   Name = "Chọn người chơi",
    Options = {"None"},
    Callback = function(Option) TargetPlayer = game.Players:FindFirstChild(Option[1]) end,
 })
 
-CombatTab:CreateButton({
-   Name = "Refresh Player List",
+MainTab:CreateButton({
+   Name = "Quét danh sách người chơi",
    Callback = function()
       local List = {}
       for _, p in pairs(game.Players:GetPlayers()) do
@@ -139,8 +144,8 @@ CombatTab:CreateButton({
    end,
 })
 
-CombatTab:CreateButton({
-   Name = "Heaven Warp (Teleport to Target)",
+MainTab:CreateButton({
+   Name = "Heaven Warp (Dịch chuyển tới)",
    Callback = function()
       if TargetPlayer and TargetPlayer.Character then
           game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
@@ -149,12 +154,12 @@ CombatTab:CreateButton({
 })
 
 --- ==========================================
---- VISUAL SYNC (ESP)
+--- DETECTION SYSTEMS (ESP)
 --- ==========================================
-local VisualsSection = VisualsTab:CreateSection("Scanning Modules")
+local VisualsSection = VisualsTab:CreateSection("Hệ Thống Quan Sát")
 
 VisualsTab:CreateToggle({
-   Name = "Player ESP",
+   Name = "Player ESP (Hiện người chơi)",
    CurrentValue = false,
    Callback = function(Value)
       for _, p in pairs(game.Players:GetPlayers()) do
@@ -162,7 +167,7 @@ VisualsTab:CreateToggle({
               if Value then
                   local High = Instance.new("Highlight", p.Character)
                   High.Name = "HeavenESP"
-                  High.FillColor = Color3.fromRGB(0, 255, 100)
+                  High.FillColor = Color3.fromRGB(255, 255, 0) -- Màu vàng thương hiệu Heaven
               else
                   if p.Character:FindFirstChild("HeavenESP") then p.Character.HeavenESP:Destroy() end
               end
@@ -172,17 +177,17 @@ VisualsTab:CreateToggle({
 })
 
 VisualsTab:CreateToggle({
-   Name = "Generator ESP",
+   Name = "Generator ESP (Hiện máy phát điện)",
    CurrentValue = false,
    Callback = function(Value)
       for _, obj in pairs(game.Workspace:GetDescendants()) do
           if obj.Name == "Generator" then
               if Value then
                   local High = Instance.new("Highlight", obj)
-                  High.Name = "HeavenGenESP"
-                  High.FillColor = Color3.fromRGB(0, 200, 255)
+                  High.Name = "HeavenGenHighlight"
+                  High.FillColor = Color3.fromRGB(0, 255, 255)
               else
-                  if obj:FindFirstChild("HeavenGenESP") then obj.HeavenGenESP:Destroy() end
+                  if obj:FindFirstChild("HeavenGenHighlight") then obj.HeavenGenHighlight:Destroy() end
               end
           end
       end
@@ -190,7 +195,7 @@ VisualsTab:CreateToggle({
 })
 
 Rayfield:Notify({
-    Title = "HEAVENHUB LOADED", 
-    Content = "Forsaken modules are now operational.", 
+    Title = "HEAVENHUB V1 READY", 
+    Content = "Mọi mô-đun đã được đồng bộ hóa thành công.", 
     Duration = 5
 })

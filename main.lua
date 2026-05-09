@@ -1,137 +1,196 @@
--- [[ HEAVENHUB - FORSAKEN & UNIVERSAL ]] --
+-- [[ HEAVENHUB - FORSAKEN KINETIC SYNC ]] --
+-- Optimized by ChosenBossScript
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "HeavenHub | Forsaken Edition",
-    LoadingTitle = "Đang quét dữ liệu game...",
-    LoadingSubtitle = "Hỗ trợ: Forsaken & Universal",
-    ConfigurationSaving = { Enabled = true, FolderName = "HeavenHub_Forsaken" }
+   Name = "HEAVENHUB | FORSAKEN V1",
+   LoadingTitle = "HEAVENHUB: KINETIC OVERDRIVE",
+   LoadingSubtitle = "Synchronizing Velocity Modules...",
+   ConfigurationSaving = { Enabled = true, FolderName = "HeavenHub_Forsaken" }
 })
 
--- [[ BIẾN HỖ TRỢ ]] --
-local player = game.Players.LocalPlayer
-local runAutoGen = false
-local genDelay = 0.5
+-- TABS
+local MainTab = Window:CreateTab("🚀 Movement", 4483362458)
+local CombatTab = Window:CreateTab("⚔️ Combat", 4483362458)
+local VisualsTab = Window:CreateTab("👁️ Visuals", 4483362458)
 
--- [[ TAB 1: FORSAKEN (SPECIAL) ]] --
-local ForsakenTab = Window:CreateTab("🛡️ Forsaken", 4483362458)
+-- STEALTH TOGGLE (Nút tàng hình ở giữa trên màn hình để đóng/mở Menu)
+local InvisibleToggle = Instance.new("ScreenGui", game.CoreGui)
+local InvisibleButton = Instance.new("TextButton", InvisibleToggle)
+InvisibleButton.BackgroundTransparency = 1
+InvisibleButton.Position = UDim2.new(0.4, 0, 0, 0)
+InvisibleButton.Size = UDim2.new(0.2, 0, 0, 50)
+InvisibleButton.Text = ""
+InvisibleButton.ZIndex = 100
+InvisibleButton.MouseButton1Click:Connect(function()
+    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.RightControl, false, game)
+end)
 
-ForsakenTab:CreateSection("Generator Mods")
+--- ==========================================
+--- KINETIC OVERRIDE (Speed & Jump)
+--- ==========================================
+local MovementSection = MainTab:CreateSection("Kinetic Manipulation")
+local WalkMultiplier = 0
+local SprintMultiplier = 0
+local JumpForce = 0
+local NoclipActive = false
 
-ForsakenTab:CreateButton({
-    Name = "Instant Solve All Gens (Dứt điểm máy)",
-    Callback = function()
-        -- Quét cả map thường và map Hell
-        local mapPath = workspace.Map.Ingame.Map
-        local targets = mapPath:FindFirstChild("Generators") and mapPath.Generators:GetChildren() or mapPath:GetChildren()
+MainTab:CreateSlider({
+   Name = "Walk Multiplier",
+   Range = {0, 10}, 
+   Increment = 0.1,
+   CurrentValue = 0,
+   Callback = function(Value) WalkMultiplier = Value end,
+})
+
+MainTab:CreateSlider({
+   Name = "Sprint Multiplier",
+   Range = {0, 15}, 
+   Increment = 0.1,
+   CurrentValue = 0,
+   Callback = function(Value) SprintMultiplier = Value end,
+})
+
+MainTab:CreateSlider({
+   Name = "Jump Impulse (Height)",
+   Range = {0, 100},
+   Increment = 1,
+   CurrentValue = 0,
+   Callback = function(Value) JumpForce = Value end,
+})
+
+MainTab:CreateToggle({
+   Name = "Noclip (Phase Walls)",
+   CurrentValue = false,
+   Callback = function(Value) NoclipActive = Value end,
+})
+
+-- Jump Logic
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") and JumpForce > 0 then
+        char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, JumpForce, char.HumanoidRootPart.Velocity.Z)
+    end
+end)
+
+-- Movement Loop
+game:GetService("RunService").Stepped:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+        local hum = char.Humanoid
+        local root = char.HumanoidRootPart
         
-        for _, v in pairs(targets) do
-            if v.Name == "Generator" or v:IsA("Model") then
-                local remote = v:FindFirstChild("Remotes") and v.Remotes:FindFirstChild("RE")
-                if remote then
-                    for i = 1, 4 do remote:FireServer() end
-                end
+        if hum.MoveDirection.Magnitude > 0 then
+            local isSprinting = hum.WalkSpeed > 20 or game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift)
+            local activeForce = isSprinting and SprintMultiplier or WalkMultiplier
+            if activeForce > 0 then
+                root.CFrame = root.CFrame + (hum.MoveDirection * activeForce)
             end
         end
-        Rayfield:Notify({Title = "Xong!", Content = "Đã ép xung toàn bộ máy phát điện."})
-    end
-})
-
-ForsakenTab:CreateToggle({
-    Name = "Auto Repair (Sửa máy tự động)",
-    CurrentValue = false,
-    Callback = function(Value)
-        runAutoGen = Value
-        task.spawn(function()
-            while runAutoGen do
-                for _, v in pairs(workspace.Map.Ingame.Map:GetChildren()) do
-                    if v.Name == "Generator" and v:FindFirstChild("Remotes") then
-                        v.Remotes.RE:FireServer()
-                    end
-                end
-                task.wait(genDelay)
+        
+        if NoclipActive then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
             end
-        end)
-    end
-})
-
-ForsakenTab:CreateSection("Survival")
-
-ForsakenTab:CreateToggle({
-    Name = "Auto Pick Pizza (Nhặt Pizza liên tục)",
-    CurrentValue = false,
-    Callback = function(Value)
-        _G.AutoPizza = Value
-        task.spawn(function()
-            while _G.AutoPizza do
-                for _, v in pairs(workspace.Map.Ingame:GetChildren()) do
-                    if v.Name == "Pizza" and v:IsA("BasePart") then
-                        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                        if hrp then v.CFrame = hrp.CFrame end
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-    end
-})
-
--- [[ TAB 2: VISUAL (ESP) ]] --
-local VisualTab = Window:CreateTab("👁️ Visuals", 4483362458)
-
-VisualTab:CreateToggle({
-    Name = "Show Generators (Hiện máy)",
-    CurrentValue = false,
-    Callback = function(Value)
-        toggleHighlightGen(Value) -- Sử dụng logic highlight bạn đã có
-    end
-})
-
-VisualTab:CreateToggle({
-    Name = "Killer/Entity ESP",
-    CurrentValue = false,
-    Callback = function(Value)
-        corruptnatureesp(Value) -- Hiện mấy con quái/Killer
-    end
-})
-
--- [[ TAB 3: UNIVERSAL (VÀO GAME NÀO CŨNG HIỆN) ]] --
-local UniTab = Window:CreateTab("🌍 Universal", 4483362458)
-
-UniTab:CreateSlider({
-    Name = "Tốc độ chạy",
-    Range = {16, 250},
-    Increment = 1,
-    CurrentValue = 16,
-    Callback = function(Value)
-        if player.Character and player.Character:FindFirstChild("Humanoid") then
-            player.Character.Humanoid.WalkSpeed = Value
         end
     end
+end)
+
+--- ==========================================
+--- COMBAT PROTOCOLS
+--- ==========================================
+local CombatSection = CombatTab:CreateSection("Assault Modules")
+local AutoAttack = false
+local TargetPlayer = nil
+
+CombatTab:CreateToggle({
+   Name = "Neural Strike (Auto-Attack)",
+   CurrentValue = false,
+   Callback = function(Value)
+      AutoAttack = Value
+      task.spawn(function()
+          while AutoAttack do
+              pcall(function()
+                  local weapon = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                  if weapon then weapon:Activate() end
+              end)
+              task.wait(0.1)
+          end
+      end)
+   end,
 })
 
-UniTab:CreateButton({
-    Name = "FPS Boost (Giảm Lag)",
-    Callback = function()
-        for _, v in pairs(game:GetDescendants()) do
-            if v:IsA("ParticleEmitter") or v:IsA("Trail") then v.Enabled = false end
-        end
-    end
+local TargetSection = CombatTab:CreateSection("Targeting Suite")
+local TargetDropdown = CombatTab:CreateDropdown({
+   Name = "Select Target",
+   Options = {"None"},
+   Callback = function(Option) TargetPlayer = game.Players:FindFirstChild(Option[1]) end,
 })
 
--- [[ TAB 4: EMOTES (TROLL) ]] --
-local TrollTab = Window:CreateTab("🕺 Troll", 4483362458)
-
-TrollTab:CreateToggle({
-    Name = "Hakari Dance",
-    CurrentValue = false,
-    Callback = function(Value) activatethehakari(Value) end
+CombatTab:CreateButton({
+   Name = "Refresh Player List",
+   Callback = function()
+      local List = {}
+      for _, p in pairs(game.Players:GetPlayers()) do
+          if p ~= game.Players.LocalPlayer then table.insert(List, p.Name) end
+      end
+      TargetDropdown:Refresh(List)
+   end,
 })
 
-TrollTab:CreateToggle({
-    Name = "Hawk Tuah Mode",
-    CurrentValue = false,
-    Callback = function(Value) hawktuahmode(Value) end
+CombatTab:CreateButton({
+   Name = "Heaven Warp (Teleport to Target)",
+   Callback = function()
+      if TargetPlayer and TargetPlayer.Character then
+          game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+      end
+   end,
 })
 
-Rayfield:LoadConfiguration()
+--- ==========================================
+--- VISUAL SYNC (ESP)
+--- ==========================================
+local VisualsSection = VisualsTab:CreateSection("Scanning Modules")
+
+VisualsTab:CreateToggle({
+   Name = "Player ESP",
+   CurrentValue = false,
+   Callback = function(Value)
+      for _, p in pairs(game.Players:GetPlayers()) do
+          if p ~= game.Players.LocalPlayer and p.Character then
+              if Value then
+                  local High = Instance.new("Highlight", p.Character)
+                  High.Name = "HeavenESP"
+                  High.FillColor = Color3.fromRGB(0, 255, 100)
+              else
+                  if p.Character:FindFirstChild("HeavenESP") then p.Character.HeavenESP:Destroy() end
+              end
+          end
+      end
+   end,
+})
+
+VisualsTab:CreateToggle({
+   Name = "Generator ESP",
+   CurrentValue = false,
+   Callback = function(Value)
+      for _, obj in pairs(game.Workspace:GetDescendants()) do
+          if obj.Name == "Generator" then
+              if Value then
+                  local High = Instance.new("Highlight", obj)
+                  High.Name = "HeavenGenESP"
+                  High.FillColor = Color3.fromRGB(0, 200, 255)
+              else
+                  if obj:FindFirstChild("HeavenGenESP") then obj.HeavenGenESP:Destroy() end
+              end
+          end
+      end
+   end,
+})
+
+Rayfield:Notify({
+    Title = "HEAVENHUB LOADED", 
+    Content = "Forsaken modules are now operational.", 
+    Duration = 5
+})

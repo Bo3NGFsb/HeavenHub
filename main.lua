@@ -3,7 +3,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "JG FORSAKEN HUB V1",
+   Name = "VOID FORSAKEN V1",
    LoadingTitle = "FORSAKEN: KINETIC SYNC",
    LoadingSubtitle = "Jump & Velocity Overdrive Active",
    ConfigurationSaving = { Enabled = false }
